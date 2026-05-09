@@ -9,7 +9,7 @@ Subscribes:
   for the next start code (00 00 00 01).
 
 Publishes:
-  /follow/target     (geometry_msgs/msg/Vector3)
+  /follow/target     (geometry_msgs/msg/Vector3Stamped)
     x = normalized bearing in [-1, 1]   (0 = centered, +ve = person to the right)
     y = monocular distance estimate (m) (calibrate `k_distance` for your camera)
     z = unused
@@ -26,7 +26,7 @@ import threading
 import cv2
 import numpy as np
 import rclpy
-from geometry_msgs.msg import Vector3
+from geometry_msgs.msg import Vector3Stamped
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
@@ -76,6 +76,8 @@ class Go2Perception(Node):
         # Recommended: raw H.264 over UDP from the Jetson, e.g. "udp://0.0.0.0:5000".
         self.declare_parameter("stream_url", "")
         self.declare_parameter("stream_fps", 30.0)
+        self.declare_parameter("process_every_n", 3)
+        self.process_every_n = int(self.get_parameter("process_every_n").value)
 
         self.conf = float(self.get_parameter("conf_threshold").value)
         self.k_dist = float(self.get_parameter("k_distance").value)
@@ -87,7 +89,7 @@ class Go2Perception(Node):
         self.get_logger().info(f"loading YOLO model: {model_path} on {self.device}")
         self.model = YOLO(model_path)
 
-        self.pub = self.create_publisher(Vector3, "/follow/target", 10)
+        self.pub = self.create_publisher(Vector3Stamped, "/follow/target", 1)
         self.frame_count = 0
         self._diagnostic_logged = False
         self._seen_nal_types: set[int] = set()
@@ -119,7 +121,8 @@ class Go2Perception(Node):
         if not ok:
             self.get_logger().warn("stream read failed")
             return
-        self.process_frame(img)
+        stamp = self.get_clock().now().to_msg()
+        self.process_frame(img, stamp)
 
     def _setup_dds(self) -> None:
         topic = self.get_parameter("camera_topic").value
@@ -154,10 +157,10 @@ class Go2Perception(Node):
         self._decoder_thread.start()
 
         video_qos = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
             durability=DurabilityPolicy.VOLATILE,
             history=HistoryPolicy.KEEP_LAST,
-            depth=10,
+            depth=1,
         )
         self.sub = self.create_subscription(
             Go2FrontVideoData, topic, self.on_video, video_qos
@@ -214,7 +217,8 @@ class Go2Perception(Node):
             img = np.frombuffer(buf, dtype=np.uint8).reshape(
                 self.frame_h, self.frame_w, 3
             )
-            self.process_frame(img)
+            stamp = self.get_clock().now().to_msg()
+            self.process_frame(img, stamp)
 
     def _note_nal_type(self, nal_type: int) -> None:
         # NAL types: 1=non-IDR slice (P), 5=IDR (I), 7=SPS, 8=PPS, 6=SEI.
@@ -233,32 +237,46 @@ class Go2Perception(Node):
                 f"first frame {field_name}: len={len(data)} head={head}"
             )
 
-    def process_frame(self, img: np.ndarray) -> None:
+    def process_frame(self, img: np.ndarray, frame_stamp=None) -> None:
+        if frame_stamp is None:
+            frame_stamp = self.get_clock().now().to_msg()
+
+        self.frame_count += 1
+        if self.frame_count % self.process_every_n != 0:
+            return
+
         h, w = img.shape[:2]
-        # predict() avoids ByteTrack (which pulls scipy and crashes on numpy 2.x).
-        # Swap to model.track(persist=True) once tracker stability is needed.
+
         results = self.model.predict(
             img, classes=[0], conf=self.conf, device=self.device, verbose=False
         )
+
         if not results:
             return
+
         boxes = results[0].boxes
+
         if boxes is None or len(boxes) == 0:
             self._maybe_show(img, None)
             return
 
-        # Pick the largest bbox (closest person). Swap for track-id persistence later.
-        xywh = boxes.xywh.cpu().numpy()  # (N, 4): cx, cy, w, h
+        xywh = boxes.xywh.cpu().numpy()
         idx = int(np.argmax(xywh[:, 2] * xywh[:, 3]))
+
         cx, _cy, _bw, bh = xywh[idx]
 
         bearing = float((cx - w / 2.0) / (w / 2.0))
         distance = float(self.k_dist / max(bh, 1.0))
 
-        msg = Vector3(x=bearing, y=distance, z=0.0)
+        msg = Vector3Stamped()
+        msg.header.stamp = frame_stamp
+        msg.header.frame_id = "front_camera"
+        msg.vector.x = bearing
+        msg.vector.y = distance
+        msg.vector.z = 0.0
+
         self.pub.publish(msg)
 
-        self.frame_count += 1
         if self.frame_count % 30 == 0:
             self.get_logger().info(
                 f"target: bearing={bearing:+.2f}  distance={distance:.2f} m  "
