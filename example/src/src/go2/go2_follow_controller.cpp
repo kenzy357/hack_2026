@@ -224,15 +224,15 @@ class Go2FollowController : public rclcpp::Node {
   static constexpr float kDistDeadband = 0.15f;
   static constexpr float kBearingDeadband = 0.05f;
   static constexpr float kKpDist = 0.8f;
-  static constexpr float kKpYaw = 2.5f;
+  static constexpr float kKpYaw = 3.5f;
   static constexpr float kVxMax = 0.8f;
   static constexpr float kVxMin = -0.3f;
-  static constexpr float kVyawMax = 1.2f;
+  static constexpr float kVyawMax = 3.0f;
   static constexpr float kMinSafeDist = 0.6f;
   static constexpr double kTargetTimeout = 0.5;
   // Max acceleration on commanded velocities (m/s² and rad/s²).
   static constexpr float kVxAccel = 1.5f;
-  static constexpr float kVyawAccel = 3.0f;
+  static constexpr float kVyawAccel = 5.0f;
   // Output deadband — suppress tiny commands that the gait can't execute cleanly.
   static constexpr float kVxDeadband = 0.08f;
   static constexpr float kVyawDeadband = 0.10f;

@@ -184,8 +184,8 @@ ffmpeg -f v4l2 -input_format yuyv422 -framerate 30 -video_size 640x480 \
       -p show_window:=true
 
 # run controller 
-
- $GO2BIN/go2_follow_controller
+source ~/hack_2026/unitree_ros2/setup_robot.sh
+$GO2BIN/go2_follow_controller
 
 # run obstacle avoidance
 ros2 run unitree_ros2_example go2_lidar_avoidance --ros-args -p debug:=true
