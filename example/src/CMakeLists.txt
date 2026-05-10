@@ -97,6 +97,14 @@ target_compile_features(h2_loco_client PRIVATE cxx_std_20)
 add_executable(h2_ankle_swing_example src/h2/low_level/h2_ankle_swing_example.cpp src/common/motor_crc_hg.cpp)
 target_compile_features(h2_ankle_swing_example PRIVATE cxx_std_20)
 
+add_executable(go2_voice_sport_client src/go2/go2_voice_sport_client.cpp src/common/ros2_sport_client.cpp)
+target_compile_features(go2_voice_sport_client PRIVATE cxx_std_20)
+
+ament_target_dependencies(go2_voice_sport_client ${DEPENDENCY_LIST})
+
+add_executable(go2_priority_controller src/go2/go2_priority_controller.cpp src/common/ros2_sport_client.cpp)
+target_compile_features(go2_priority_controller PRIVATE cxx_std_20)
+ament_target_dependencies(go2_priority_controller ${DEPENDENCY_LIST})
 
 ament_target_dependencies(low_level_ctrl ${DEPENDENCY_LIST})
 ament_target_dependencies(low_level_ctrl_hg ${DEPENDENCY_LIST})
@@ -171,13 +179,27 @@ endif()
 
 install(TARGETS g1_audio_client_example)
 
-install(TARGETS go2_follow_controller)
-install(TARGETS h2_loco_client)
-install(TARGETS h2_ankle_swing_example)
+install(TARGETS
+        go2_follow_controller
+        go2_voice_sport_client
+        h2_loco_client
+        h2_ankle_swing_example
+        DESTINATION lib/${PROJECT_NAME})
+
+install(TARGETS go2_priority_controller
+        DESTINATION lib/${PROJECT_NAME})
 
 install(PROGRAMS src/go2/go2_perception.py
         DESTINATION lib/${PROJECT_NAME}
         RENAME go2_perception)
+
+install(PROGRAMS src/go2/go2_webrtc_camera.py
+        DESTINATION lib/${PROJECT_NAME}
+        RENAME go2_webrtc_camera)
+
+install(PROGRAMS src/go2/go2_voice_command_publisher.py
+        DESTINATION lib/${PROJECT_NAME}
+        RENAME go2_voice_command_publisher)
 
 
 
