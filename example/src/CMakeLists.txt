@@ -179,6 +179,14 @@ install(PROGRAMS src/go2/go2_perception.py
         DESTINATION lib/${PROJECT_NAME}
         RENAME go2_perception)
 
+install(PROGRAMS src/go2/go2_lidar_avoidance.py
+        DESTINATION lib/${PROJECT_NAME}
+        RENAME go2_lidar_avoidance)
+
+install(PROGRAMS src/go2/go2_avoidance_bridge.py
+        DESTINATION lib/${PROJECT_NAME}
+        RENAME go2_avoidance_bridge)
+
 
 
 if(BUILD_TESTING)

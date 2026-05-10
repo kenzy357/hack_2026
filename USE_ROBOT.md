@@ -176,10 +176,20 @@ ffmpeg -f v4l2 -input_format yuyv422 -framerate 30 -video_size 640x480 \
 
   On the laptop — run perception with the visualization window enabled:
 
+# run perception
+
   source ~/hack_2026/unitree_ros2/setup_robot.sh
   ros2 run unitree_ros2_example go2_perception --ros-args \
       -p stream_url:='udp://0.0.0.0:5000?fifo_size=1000000&overrun_nonfatal=1' \
       -p show_window:=true
+
+# run controller 
+
+ $GO2BIN/go2_follow_controller
+
+# run obstacle avoidance
+ros2 run unitree_ros2_example go2_lidar_avoidance --ros-args -p debug:=true
+
 
 # build
 source /opt/ros/humble/setup.bash

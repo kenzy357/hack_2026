@@ -83,7 +83,7 @@ class Go2Perception(Node):
         self.declare_parameter("coast_frames", 9)  # ~0.3 s at 30 fps
         # When re-acquiring a lost lock, only accept candidates whose center is
         # within this fraction of frame-diagonal from the last known position.
-        self.declare_parameter("reacquire_radius", 0.25)
+        self.declare_parameter("reacquire_radius", 0.2)
         self.declare_parameter("show_window", False)
         # If non-empty, perception ignores DDS and pulls frames from this URL.
         # Anything OpenCV/FFmpeg can open: udp://, rtsp://, http://, file path.
